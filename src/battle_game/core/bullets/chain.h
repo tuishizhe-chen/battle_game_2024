@@ -29,8 +29,12 @@ class Chain : public Bullet {
   glm::vec2 velocity_{};
   glm::vec2 pull_velocity_{};
   bool should_pull_{false};
-  bool first_damaged_{false};
-  bool second_damaged_{false};
+  std::vector<uint32_t> first_damaged_;
+  std::vector<uint32_t> second_damaged_;
   unit::Devil *father_unit_{};
+  std::vector<std::pair<uint32_t, float>> displacement_units_;
+  // Units that are being displaced by the chain. The first value is the id of
+  // the unit, the second one is the total displacement length. The displacement
+  // finished when the second value is larger than 2.0f
 };
 }  // namespace battle_game::bullet

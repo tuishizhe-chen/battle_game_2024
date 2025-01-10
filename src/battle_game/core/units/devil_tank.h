@@ -12,6 +12,7 @@ class Devil : public Unit {
   [[nodiscard]] bool IsHit(glm::vec2 position) const override;
   bool Last_Chain{false};
   std::vector<uint32_t> Electric_Effect_id;
+  bool IsPulling;
 
  protected:
   void TankMove(float move_speed, float rotate_angular_speed);
