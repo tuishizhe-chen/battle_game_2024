@@ -11,12 +11,14 @@ namespace {
 uint32_t tank_body_model_index = 0xffffffffu;
 uint32_t tank_pulling_body_model_index = 0xffffffffu;
 uint32_t tank_turret_model_index = 0xffffffffu;
-uint32_t tank_pulling_turrent_model_index = 0xffffffffu;
+uint32_t tank_pulling_turret_model_index = 0xffffffffu;
+uint32_t tank_dashing_body_model_index = 0xffffffffu;
 }  // namespace
 
 Devil::Devil(GameCore *game_core, uint32_t id, uint32_t player_id)
-    : Unit(game_core, id, player_id), Last_Chain(nullptr) {
+    : Unit(game_core, id, player_id) {
   Electric_Effect_id = {};
+  damaged_units_by_dash_ = {};
   IsPulling = false;
   if (!~tank_body_model_index) {
     auto mgr = AssetsManager::GetInstance();
@@ -132,43 +134,38 @@ Devil::Devil(GameCore *game_core, uint32_t id, uint32_t player_id)
       tank_pulling_body_model_index =
           mhr->RegisterModel(body_vertices, body_indices);
     }
-
+  }
+  if (!~tank_dashing_body_model_index) {
+    auto mir = AssetsManager::GetInstance();
     {
-      /* Tank Turret */
-      std::vector<ObjectVertex> turret_vertices;
-      std::vector<uint32_t> turret_indices;
-      const int precision = 60;
-      const float inv_precision = 1.0f / float(precision);
-      for (int i = 0; i < precision; i++) {
-        auto theta = (float(i) + 0.5f) * inv_precision;
-        theta *= glm::pi<float>() * 2.0f;
-        auto sin_theta = std::sin(theta);
-        auto cos_theta = std::cos(theta);
-        turret_vertices.push_back({{sin_theta * 0.5f, cos_theta * 0.5f},
-                                   {0.0f, 0.0f},
-                                   {0.7f, 0.7f, 0.7f, 1.0f}});
-        turret_indices.push_back(i);
-        turret_indices.push_back((i + 1) % precision);
-        turret_indices.push_back(precision);
-      }
-      turret_vertices.push_back(
-          {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.7f, 0.7f, 0.7f, 1.0f}});
-      turret_vertices.push_back(
-          {{-0.1f, 0.0f}, {0.0f, 0.0f}, {0.7f, 0.7f, 0.7f, 1.0f}});
-      turret_vertices.push_back(
-          {{0.1f, 0.0f}, {0.0f, 0.0f}, {0.7f, 0.7f, 0.7f, 1.0f}});
-      turret_vertices.push_back(
-          {{-0.1f, 1.2f}, {0.0f, 0.0f}, {0.7f, 0.7f, 0.7f, 1.0f}});
-      turret_vertices.push_back(
-          {{0.1f, 1.2f}, {0.0f, 0.0f}, {0.7f, 0.7f, 0.7f, 1.0f}});
-      turret_indices.push_back(precision + 1 + 0);
-      turret_indices.push_back(precision + 1 + 1);
-      turret_indices.push_back(precision + 1 + 2);
-      turret_indices.push_back(precision + 1 + 1);
-      turret_indices.push_back(precision + 1 + 2);
-      turret_indices.push_back(precision + 1 + 3);
-      tank_pulling_turrent_model_index =
-          mhr->RegisterModel(turret_vertices, turret_indices);
+      /* Tank Body */
+      std::vector<ObjectVertex> body_vertices = {
+          {{0.8f, -0.2f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{-0.8f, -0.2f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{0.6f, -1.2f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{-0.6f, -1.2f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{0.4f, -0.6f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{-0.4f, -0.6f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+          {{0.0f, 1.2f},
+           {0.0f, 0.0f},
+           {59.0f / 256.0f, 160.0f / 256.0f, 193.0f / 256.0f, 1.0f}},
+      };
+      std::vector<uint32_t> body_indices = {0, 2, 4, 1, 3, 5, 0, 1,
+                                            4, 1, 4, 5, 0, 1, 6};
+      tank_dashing_body_model_index =
+          mir->RegisterModel(body_vertices, body_indices);
     }
   }
 }
@@ -177,10 +174,14 @@ void Devil::Render() {
   battle_game::SetTransformation(position_, rotation_);
   battle_game::SetTexture(0);
   battle_game::SetColor(game_core_->GetPlayerColor(player_id_));
-  if (IsPulling) {
+  if (IsPulling && !IsDashing) {
     battle_game::DrawModel(tank_pulling_body_model_index);
     battle_game::SetRotation(turret_rotation_);
-    battle_game::DrawModel(tank_pulling_turrent_model_index);
+    battle_game::DrawModel(tank_turret_model_index);
+  } else if (IsDashing) {
+    battle_game::DrawModel(tank_dashing_body_model_index);
+    battle_game::SetRotation(turret_rotation_);
+    battle_game::DrawModel(tank_turret_model_index);
   } else {
     battle_game::DrawModel(tank_body_model_index);
     battle_game::SetRotation(turret_rotation_);
@@ -192,16 +193,18 @@ void Devil::Update() {
   TankMove(3.0f, glm::radians(180.0f));
   TurretRotate();
   Fire();
+  BeginDash();
+  Dashing();
 }
 
 void Devil::TankMove(float move_speed, float rotate_angular_speed) {
-  if (!Last_Chain) {
+  if (!IsPulling && !IsDashing) {
     auto player = game_core_->GetPlayer(player_id_);
     if (player) {
       auto &input_data = player->GetInputData();
       glm::vec2 offset{0.0f};
       if (input_data.key_down[GLFW_KEY_W]) {
-        offset.y += 1.0f;
+        offset.y += 1.5f;
       }
       if (input_data.key_down[GLFW_KEY_S]) {
         offset.y -= 1.5f;
@@ -242,6 +245,58 @@ void Devil::TurretRotate() {
   }
 }
 
+void Devil::BeginDash() {
+  if (dash_count_down_ == 0 && !IsPulling) {
+    auto player = game_core_->GetPlayer(player_id_);
+    if (player) {
+      auto &input_data = player->GetInputData();
+      if (input_data.key_down[GLFW_KEY_F]) {
+        IsDashing = true;
+        dash_count_down_ = 10 * kTickPerSecond;  // Dash interval 10 second.
+      }
+    }
+  }
+  if (dash_count_down_) {
+    dash_count_down_--;
+  }
+}
+
+bool id_in_vector(std::vector<uint32_t> &vec, uint32_t id) {
+  for (auto i : vec) {
+    if (i == id) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void Devil::Dashing() {
+  if (IsDashing && !IsPulling) {
+    auto player = game_core_->GetPlayer(player_id_);
+    if (dash_count_down_ <= (9.4) * kTickPerSecond) {
+      IsDashing = false;
+    } else {
+      auto dash_target = LocalToWorld(glm::vec2{0.0f, 12.0f} * kSecondPerTick);
+      if (game_core_->IsBlockedByObstacles(dash_target)) {
+        IsDashing = false;
+      } else {
+        game_core_->PushEventMoveUnit(id_, dash_target);
+      }
+      auto &units = game_core_->GetUnits();
+      for (auto &unit : units) {
+        if (unit.first == id_) {
+          continue;
+        }
+        if (unit.second->IsHit(position_) &&
+            !id_in_vector(damaged_units_by_dash_, unit.first)) {
+          game_core_->PushEventDealDamage(unit.first, id_, 30.0f);
+          damaged_units_by_dash_.push_back(unit.first);
+        }
+      }
+    }
+  }
+}
+
 void Devil::Fire() {
   if (fire_count_down_ == 0) {
     auto player = game_core_->GetPlayer(player_id_);
@@ -253,7 +308,7 @@ void Devil::Fire() {
             position_ + Rotate({0.0f, 1.2f}, turret_rotation_),
             turret_rotation_, GetDamageScale(), velocity,
             input_data.mouse_cursor_position, this);
-        fire_count_down_ = 3 * kTickPerSecond;  // Fire interval 1 second.
+        fire_count_down_ = 3 * kTickPerSecond;  // Fire interval 3 second.
       }
     }
   }

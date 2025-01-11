@@ -10,13 +10,14 @@ class Devil : public Unit {
   void Render() override;
   void Update() override;
   [[nodiscard]] bool IsHit(glm::vec2 position) const override;
-  bool Last_Chain{false};
   std::vector<uint32_t> Electric_Effect_id;
   bool IsPulling;
 
  protected:
   void TankMove(float move_speed, float rotate_angular_speed);
   void TurretRotate();
+  void BeginDash();
+  void Dashing();
   void Fire();
   [[nodiscard]] const char *UnitName() const override;
   [[nodiscard]] const char *Author() const override;
@@ -24,5 +25,9 @@ class Devil : public Unit {
   float turret_rotation_{0.0f};
   uint32_t fire_count_down_{0};
   uint32_t mine_count_down_{0};
+  uint32_t dash_count_down_{0};
+  bool IsDashing{false};
+
+  std::vector<uint32_t> damaged_units_by_dash_;
 };
 }  // namespace battle_game::unit
