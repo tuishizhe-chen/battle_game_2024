@@ -22,6 +22,7 @@ class Chain : public Bullet {
         unit::Devil *father_unit);
   ~Chain() override;
   void Render() override;
+  void RenderChain();
   void Update() override;
   glm::vec2 target_position_{};
 

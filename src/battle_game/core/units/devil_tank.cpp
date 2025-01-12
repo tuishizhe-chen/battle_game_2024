@@ -20,6 +20,57 @@ Devil::Devil(GameCore *game_core, uint32_t id, uint32_t player_id)
   Electric_Effect_id = {};
   damaged_units_by_dash_ = {};
   IsPulling = false;
+  if (!~chain_head_model_index) {
+    auto mer = AssetsManager::GetInstance();
+    {
+      /* Chain Head */
+      std::vector<ObjectVertex> chain_head_vertices = {
+          {{0.0f, 0.0f},
+           {0.0f, 0.0f},
+           {184.0f / 256.0f, 184.0f / 256.0f, 184.0f / 256.0f, 1.0f}},
+          {{-0.2f, 0.3f},
+           {0.0f, 0.0f},
+           {184.0f / 256.0f, 184.0f / 256.0f, 184.0f / 256.0f, 1.0f}},
+          {{0.2f, 0.3f},
+           {0.0f, 0.0f},
+           {184.0f / 256.0f, 184.0f / 256.0f, 184.0f / 256.0f, 1.0f}},
+          {{0.0f, 0.8f},
+           {0.0f, 0.0f},
+           {184.0f / 256.0f, 184.0f / 256.0f, 184.0f / 256.0f, 1.0f}},
+      };
+      std::vector<uint32_t> chain_head_indices = {0, 1, 3, 0, 2, 3};
+      chain_head_model_index =
+          mer->RegisterModel(chain_head_vertices, chain_head_indices);
+    }
+  }
+  if (!~chain_model_index) {
+    auto mfr = AssetsManager::GetInstance();
+    {
+      /* Chain */
+      std::vector<ObjectVertex> chain_vertices = {
+          {{0.0f, 0.0f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}},
+          {{-0.1f, 0.4f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}},
+          {{0.1f, 0.4f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}},
+          {{0.0f, 0.2f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}},
+          {{0.1f, 0.5f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}},
+          {{-0.1f, 0.5f},
+           {0.0f, 0.0f},
+           {206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f}}};
+      std::vector<uint32_t> chain_indices = {0, 1, 3, 0, 2, 3,
+                                             3, 4, 2, 3, 5, 1};
+      chain_model_index = mfr->RegisterModel(chain_vertices, chain_indices);
+    }
+  }
   if (!~tank_body_model_index) {
     auto mgr = AssetsManager::GetInstance();
     {

@@ -2,7 +2,6 @@
 #include "battle_game/core/bullets/chain.h"
 #include "battle_game/core/unit.h"
 
-
 namespace battle_game::unit {
 class Devil : public Unit {
  public:
@@ -12,6 +11,8 @@ class Devil : public Unit {
   [[nodiscard]] bool IsHit(glm::vec2 position) const override;
   std::vector<uint32_t> Electric_Effect_id;
   bool IsPulling;
+  uint32_t chain_model_index{0xffffffffu};
+  uint32_t chain_head_model_index{0xffffffffu};
 
  protected:
   void TankMove(float move_speed, float rotate_angular_speed);

@@ -4,6 +4,7 @@
 #include "battle_game/core/particles/particles.h"
 #include "battle_game/core/unit.h"
 #include "battle_game/core/units/devil_tank.h"
+#include "battle_game/graphics/graphics.h"
 
 namespace battle_game::bullet {
 Chain::Chain(GameCore *core,
@@ -36,10 +37,36 @@ bool id_in_vector(std::vector<uint32_t> &vec, uint32_t id) {
 }
 
 void Chain::Render() {
-  SetTransformation(position_, rotation_, glm::vec2{0.1f});
+  SetTransformation(position_,
+                    atan2(velocity_.y, velocity_.x) - glm::radians(90.0f),
+                    glm::vec2{0.2f});
   SetColor(game_core_->GetPlayerColor(player_id_));
   SetTexture(BATTLE_GAME_ASSETS_DIR "textures/particle3.png");
-  DrawModel(0);
+  DrawModel(father_unit_->chain_head_model_index);
+}
+
+void Chain::RenderChain() {
+  auto current_head_position_ = position_;
+  auto devil_position_ = father_unit_->GetPosition();
+  battle_game::SetTransformation(
+      current_head_position_,
+      atan2(velocity_.y, velocity_.x) - glm::radians(90.0f));
+  battle_game::SetTexture(0);
+  battle_game::SetColor(
+      glm::vec4{184.0f / 256.0f, 184.0f / 256.0f, 184.0f / 256.0f, 1.0f});
+  battle_game::DrawModel(father_unit_->chain_head_model_index);
+  while (length(current_head_position_ - devil_position_) > 0.3f) {
+    auto to_devil_rotation = atan2((devil_position_ - current_head_position_).y,
+                                   (devil_position_ - current_head_position_)
+                                       .x);  // The direction head to devil
+    battle_game::SetTransformation(current_head_position_,
+                                   to_devil_rotation - glm::radians(90.0f));
+    battle_game::SetTexture(0);
+    battle_game::SetColor(
+        glm::vec4{206.0f / 256.0f, 206.0f / 256.0f, 206.0f / 256.0f, 1.0f});
+    battle_game::DrawModel(father_unit_->chain_model_index);
+    current_head_position_ += Rotate(glm::vec2{0.25f, 0.0f}, to_devil_rotation);
+  }
 }
 
 void Chain::Update() {
@@ -149,6 +176,8 @@ void Chain::Update() {
       }
     }
   }
+
+  RenderChain();
 
   if (should_die) {
     game_core_->PushEventRemoveBullet(id_);
